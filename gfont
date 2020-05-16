@@ -1,0 +1,33 @@
+#!/bin/bash
+GOOGLE_FONTS_KEY=YOUR_KEY_HERE
+
+clean_up () {
+    ARG=$?
+    rm $tmpfile
+    exit $ARG
+}
+trap clean_up EXIT
+
+tmpfile=$(mktemp)
+curl -Ss https://www.googleapis.com/webfonts/v1/webfonts\?key\=$GOOGLE_FONTS_KEY -o $tmpfile || exit 1
+
+fontNames=$(jq ".items[].family" -r $tmpfile | fzf -m )
+[ $fontNames ] || exit 0
+
+IFS=$'\n'
+for fontName in $fontNames; do
+    firstLetter=${fontName:0:1}
+    firstLetter=${firstLetter,,} # lowercase it
+    dir="$HOME/.fonts/$firstLetter"
+    mkdir -p $dir
+    echo $fontName
+    IFS=$'\t'
+    jq ".items[] | select(.family == \"$fontName\").files | to_entries[] | [.key, .value] | @tsv" -r $tmpfile | while read -r variant url; do
+        path="$dir/$fontName-$variant.ttf"
+        if curl -Ss "$url" -o "$path"; then
+            echo "$path"
+        fi
+    done
+done
+echo "Rebuilding font cache..."
+fc-cache -f
