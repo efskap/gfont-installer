@@ -12,7 +12,7 @@ tmpfile=$(mktemp)
 curl -Ss https://www.googleapis.com/webfonts/v1/webfonts\?key\=$GOOGLE_FONTS_KEY -o $tmpfile || exit 1
 
 fontNames=$(jq ".items[].family" -r $tmpfile | fzf -m )
-[ $fontNames ] || exit 0
+[ "$fontNames" ] || exit 0
 
 IFS=$'\n'
 for fontName in $fontNames; do
